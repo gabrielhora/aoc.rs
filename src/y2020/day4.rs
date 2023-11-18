@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::io::Error;
+
 use regex::Regex;
 
 #[derive(Debug)]
@@ -14,10 +14,22 @@ struct Passport {
     pid: Option<String>,
 }
 
+impl Passport {
+    fn new(map: HashMap<&str, &str>) -> Self {
+        Self {
+            byr: map.get("byr").and_then(|v| v.parse().ok()),
+            iyr: map.get("iyr").and_then(|v| v.parse().ok()),
+            eyr: map.get("eyr").and_then(|v| v.parse().ok()),
+            hgt: map.get("hgt").map(|v| v.to_string()),
+            hcl: map.get("hcl").map(|v| v.to_string()),
+            ecl: map.get("ecl").map(|v| v.to_string()),
+            pid: map.get("pid").map(|v| v.to_string()),
+        }
+    }
+}
+
 fn part1() -> usize {
-    parse()
-        .expect("failed to parse input")
-        .iter()
+    parse().iter()
         .filter(|p| p.byr.is_some()
             && p.iyr.is_some()
             && p.eyr.is_some()
@@ -34,9 +46,7 @@ fn part2() -> usize {
     let ecl_re = Regex::new(r"^amb|blu|brn|gry|grn|hzl|oth$").expect("invalid regex");
     let pid_re = Regex::new(r"^[0-9]{9}$").expect("invalid regex");
 
-    parse()
-        .expect("failed to parse input")
-        .iter()
+    parse().iter()
         .filter(|p|
             p.byr.is_some_and(|v| (1920..=2002).contains(&v))
                 && p.iyr.is_some_and(|v| (2010..=2020).contains(&v))
@@ -61,22 +71,21 @@ fn part2() -> usize {
         .count()
 }
 
-fn parse() -> Result<Vec<Passport>, Error> {
-    let file = fs::read_to_string("src/y2020/day4.txt")?;
-    let passports = file
+fn parse() -> Vec<Passport> {
+    fs::read_to_string("src/y2020/day4.txt")
+        .expect("failed to parse input")
         .replace("\n\n", "$$")
-        .replace("\n", " ")
+        .replace('\n', " ")
         .replace("$$", "\n")
         .lines()
         .map(parse_passport)
-        .collect();
-    Ok(passports)
+        .collect()
 }
 
 fn parse_passport(passport: &str) -> Passport {
     let map = {
         let fields: Vec<(&str, &str)> = passport
-            .split(' ')
+            .split_whitespace()
             .map(|f| {
                 let parts: Vec<&str> = f.split(':').collect();
                 assert_eq!(parts.len(), 2);
@@ -86,20 +95,11 @@ fn parse_passport(passport: &str) -> Passport {
 
         let mut map = HashMap::new();
         for (name, value) in fields {
-            map.insert(name.to_string(), value.to_string());
+            map.insert(name, value);
         }
         map
     };
-
-    Passport {
-        byr: map.get("byr").and_then(|v| v.parse().ok()),
-        iyr: map.get("iyr").and_then(|v| v.parse().ok()),
-        eyr: map.get("eyr").and_then(|v| v.parse().ok()),
-        hgt: map.get("hgt").cloned(),
-        hcl: map.get("hcl").cloned(),
-        ecl: map.get("ecl").cloned(),
-        pid: map.get("pid").cloned(),
-    }
+    Passport::new(map)
 }
 
 
